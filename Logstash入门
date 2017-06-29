@@ -87,5 +87,28 @@
   验证配置,运行命令：bin/logstash -f first-pipeline.conf --config.test_and_exit
   --config.test_and_exit配置选项解析配置文件并报告任何错误
   
+  如果配置通过了配置检测,通过命令启动logstash: bin/logstash -f first-pipeline.conf --config.reload.automatic
+  --config.reload.automatic选项支持配置自动重新加载,这样就不需要每次修改配置文件后重启logstash。
+  
+  如果管道确认的运行,你应该看到如下的一系列的事件打印到控制台：
+  {
+    "@timestamp" => 2016-10-11T20:54:06.733Z,
+        "offset" => 325,
+      "@version" => "1",
+          "beat" => {
+        "hostname" => "My-MacBook-Pro.local",
+            "name" => "My-MacBook-Pro.local"
+    },
+    "input_type" => "log",
+          "host" => "My-MacBook-Pro.local",
+        "source" => "/path/to/file/logstash-tutorial.log",
+       "message" => "83.149.9.216 - - [04/Jan/2015:05:13:42 +0000] \"GET /presentations/logstash-monitorama-2013/images/kibana-search.png HTTP/1.1\" 200 203023 \"http://semicomplete.com/presentations/logstash-monitorama-2013/\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.77 Safari/537.36\"",
+          "type" => "log",
+          "tags" => [
+        [0] "beats_input_codec_plain_applied"
+    ]
+  }
+  
+  通过Grok filter插件解析web日志
   
   
