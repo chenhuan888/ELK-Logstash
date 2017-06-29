@@ -58,7 +58,7 @@
   # }
   output {
   }
-  这个骨架是不能起作用的,因为input和output部分没有定义任何有效的选项。开始的时候，复制和粘贴骨架配置管道到一个first-pipeline.confinput文件中,这个
+  这个骨架是不能起作用的,因为input和output部分没有定义任何有效的选项。开始的时候，复制和粘贴骨架配置管道到一个first-pipeline.conf文件input中,这个
   文件保存在logstash的安装目录中。
   
   接下来使用beat input插件配置你的logstash实例,添加下列行到first-pipeline.conf文件的input部分。
