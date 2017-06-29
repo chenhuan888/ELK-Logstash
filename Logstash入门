@@ -1,0 +1,91 @@
+1.logstash安装
+  此处省略，查看官方文档进行安装
+
+2.第一个事件
+  首先，让我们用最基本的LogStash管道测试你LogStash安装。
+  一个LogStash管道有两个必须的元素,input和output,还有一个可选的元素filter.input插件从一个源中消费数据,filter插件将数据修改成你需要的,
+  output插件将数据写入目的地。
+  
+  运行最基本的LogStash管道来测试你的LogStash安装，例如：
+  cd logstash-5.4.3
+  bin/logstash -e 'input { stdin { } } output { stdout {} }'
+  
+  -e标记支持你在命令行中直接的指定一个配置,在命令行中指定配置可以让你快速测试配置而不需要反复编辑文件。示例中的管道已结构化的格式从标准输入
+  中拿到input,stdin,然后将输入移动到标准的output,stdout。
+  
+  Logstash启动后,进行等待直到你看到Pipeline main started,然后在命令行提示中输入hello world
+  hello world
+  2013-11-21T01:22:14.405+0000 0.0.0.0 hello world
+  Logstash添加时间戳和ip地址信息到消息中,在shell中发出ctrl+d命令推出logstash.
+  
+  祝贺你!你创建和运行基本LogStash管道。接下来，您将学习如何创建更实际的管道。
+  
+3.通过Logstash解析日志
+  在你的第一个事件中,你创建了一个基础的管道来测试logstash的安装。在现实世界中,一个logstash管道稍微复杂一点,一般有一个或多个input,filter,
+  output插件。
+  
+  在本章节,你使用filebeat创建了一个logstash管道,将apache web的日志作为input,解析这些日志来创建特定的字段名,并将这些解析的数据写到Elasticsearch
+  集群中.不是在命令行中定义管道配置,而是定义一个管道配置文件。
+  
+  配置filebeat发送行日志给logstash
+  在你创建logstash管道之前,你将配置filebeat来发生行日志给logstash。filebeat客户端是一个轻量级,资源友好的工具,可以从服务器上收集日志文件并将这些
+  日志转发给logstash实例进行处理。filebeat设计主要为可靠性和低延迟,filebeat对主机资源的占用很轻,beat input插件在logstash实例中减少资源要求。
+  
+  默认logstash安装包含了beat input插件,这些beat input插件支持logstash从Elastic beats框架接收事件,这就意味这任何其他的beat框架所写的beat都可以
+  发生数据到logstash.安装filebeat到你的数据资源服务器。
+  
+  安装好filebeat之后,你需要配置一下。在你的filebeat安装目录中打开filebeat.yml文件,替换下面几行的内容,确保paths指向apache log文件.
+  filebeat.prospectors:
+  - input_type: log
+    paths:
+      - /path/to/file/logstash-tutorial.log 
+    output.logstash:
+      hosts: ["localhost:5043"]
+  保存配置,为了保持配置简单,您不会像现实世界中的场景那样指定TLS/SSL设置。在数据资源服务器上,运行下面的filebeat命令：
+  sudo ./filebeat -e -c filebeat.yml -d "publish"
+  filebeat将尝试连接到5043端口,直到Logstash通过一个beats插件启动,否则那个端口没有任何回答,所以任何你看到的连接失败的消息在这个时候恢复正常.
+  
+  配置logstash的filebeat input
+  接下来,你创建一个logstash配置管道使用beat input插件从beat接收事件。下面的文本表示配置管道的骨架：
+  # The # character at the beginning of a line indicates a comment. Use
+  # comments to describe your configuration.
+  input {
+  }
+  # The filter part of this file is commented out to indicate that it is
+  # optional.
+  # filter {
+  #
+  # }
+  output {
+  }
+  这个骨架是不能起作用的,因为input和output部分没有定义任何有效的选项。开始的时候，复制和粘贴骨架配置管道到一个first-pipeline.confinput文件中,这个
+  文件保存在logstash的安装目录中。
+  
+  接下来使用beat input插件配置你的logstash实例,添加下列行到first-pipeline.conf文件的input部分。
+  beats {
+     port => "5043"
+  }
+  
+  后面你将配置Logstash写入elasticsearch.现在可以添加以下行到output部分,当运行logstash时使output打印到控制台。
+  stdout { codec => rubydebug }
+  
+  当你做好了,first-pipeline.conf的内容如下：
+  input {
+    beats {
+        port => "5043"
+    }
+  }
+  # The filter part of this file is commented out to indicate that it is
+  # optional.
+  # filter {
+  #
+  # }
+  output {
+      stdout { codec => rubydebug }
+  }
+  
+  验证配置,运行命令：bin/logstash -f first-pipeline.conf --config.test_and_exit
+  --config.test_and_exit配置选项解析配置文件并报告任何错误
+  
+  
+  
