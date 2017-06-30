@@ -69,3 +69,11 @@ log.level                      日志级别                                     
 log.format                     日志格式,json和plain                                                        plain
 path.logs                      Logstash写日志的目录                                                        LOGSTASH_HOME/logs
 path.plugins                   自定义插件                                                                  不用平台不同
+
+通过命令行运行Logstash
+使用下面的命令通过命令行运行logstash: bin/logstash [options]
+这里的[options]是命令行标记,你可以指定来控制Logstash的执行。下面的例子是运行Logstash并加载mypipeline.conf文件定义的配置：
+bin/logstash -f mypipeline.conf
+当你要测试Logstash时指定命令行选项是很有用的。在生产环境中,推荐使用Logstash设置文件控制logstash执行。使用设置文件可以更容易指定多个选项,它为你提供
+了一个单一的版本控制的文件,每次运行你可以总使用它启动。
+
