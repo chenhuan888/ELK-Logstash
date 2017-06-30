@@ -138,7 +138,7 @@
   output {
       stdout { codec => rubydebug }
   }
-  保存你的更改,因为你启用的配置自动加载,你不需要重启logstash来重载你的修改。然后你需要迫使filebeat从scratch读取日志文件,前往filebeat运行的终端
+  保存你的更改,因为你启用的配置自动加载,你不需要重启logstash来重载你的修改。然而你需要迫使filebeat从scratch读取日志文件,前往filebeat运行的终端
   窗口并使用ctrl+c关闭filebeat,然后删除filebeat注册表文件。例如运行：
   sudo rm data/registry
   由于filebeat存储harvests每种状态在注册表文件中,删除注册表文件迫使filebeat从scratch读取正在harvest的所有文件。接下来通过下面命令重启filebeat:
