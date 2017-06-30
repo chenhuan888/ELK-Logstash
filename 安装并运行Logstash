@@ -8,3 +8,64 @@ bin       二进制脚本,包含logstash启动Logstash,logstash-plugin安装插�
 settings  配置文件,包含logstash.yml和jvm.options                          {extract.path}/config                       path.settings
 logs      日志文件                                                       {extract.path}/logs                          path.logs
 plugins   本地插件文件,每个插件包含在子目录中,仅开发推荐                     {extract.path}/plugins                      path.plugins
+
+2.logstash配置文件
+logstash有两种类型的配置文件,管道配置文件-定义logstash处理管道,设置文件-指定选项控制logstash启动和执行。
+
+管道配置文件：
+当你定义logstash处理管道时,你创建管道配置文件,deb和rpm安装的话,你将管道配置文件放入/etc/logstash/conf.d目录,logstash试图从/etc/logstash/conf.d目
+录加载所有文件,因此不要在这个目录中存储任何非配置文件或备份文件。
+【在配置Logstash中查看更多】
+
+设置文件：
+设置文件已经在LogStash安装定义。Logstash包括以下设置文件：
+logstash.yml：包含Logstash配置标识,您可以在这个文件中设置标志而不用在命令行传递标志。任何在命令行中的标识将覆盖logstash.yml文件中相应的设置。
+jvm.options：包含JVM配置标识,在单独的行上指定每个标识,您也可以使用此文件为LogStash设置locale.
+startup.options：参见官网
+
+你可以在logstash设置文件logstash.yml中设置选项来控制logstash的执行。例如你可以指定pipeline设置,配置文件的地址,日志选项和其他设置。logstash.yml文件
+中的大多数设置在命令行中也可以使用。任何在命令行中的标识将覆盖logstash.yml文件中相应的设置。
+logstash.yml是用YMAL写的,可以按层次结构指定设置，也可以使用平面键。例如,使用分层形式设置pipeline batch size和batch dely，您指定：
+pipeline:
+  batch:
+    size: 125
+    delay: 5
+若要表示与平面键相同的值，请指定：
+pipeline.batch.size: 125
+pipeline.batch.delay: 5
+logstash.yml文件包含下列设置：
+设置                            描述                                                                       默认值
+node.name                      节点描述名称                                                                机器的主机名
+path.data                      LogStash和插件使用任何持久性的需要目录                                        LOGSTASH_HOME/data
+pipeline.workers               平行执行filter和output管道的数量,如果发现事件备份或cpu没饱和,                  主机CPU核心数
+                               建议增加这个数字以更好地利用机器处理能力
+pipeline.output.workers        使用每个output插件的workers数量                                              1
+pipeline.batch.size            单个工作线程在试图执行其filter和output之前从input收集的最大事件数,       
+                               通常越大越好,但要以增加内存开销为代价.你可以通过设置ls_heap_size变量            125
+                               选项加JVM堆大小有效地使用此选项。                          
+pipeline.batch.delay           当批量创建管道时,派遣小的批处理给filter和worker需等待的毫秒数                   5
+pipeline.unsafe_shutdown       当你设置成true,迫使logstash退出关闭期间尽管内存中有正在进行的事件               false
+path.config                    主要用于主管道的LogStash配置路径。如果指定目录或通配符，则按照字母顺序           不同的平台不通
+                               从目录中读取配置文件。
+config.string                  一个字符串,包含用于主管道的管道配置,使用相同语法配置文件                        none
+config.test_and_exit           设置成true,检查配置有效并退出。注意grok模式下不检查此项设置的正确性,             
+                               logstash可以目录中读取多个配置文件,如果你结合log.level:debug和此设置           false
+                               logstash将记录结合的配置文件,注释每个配置块资源文件的来源
+config.reload.automatic        当设置为true,定期检查配置如果改变则重新加载配置,也可通过sighup信号手动触发       false
+config.reload.interval         每隔多少秒检查Logstash配置文件                                                3
+config.debug                   当设置为true,将完全编译的配置显示为debug日志消息,必须设置log.level:debug        false
+queue.type                     用于事件缓冲的内部队列模型。指定memory为基于内存队列,persisted基于磁盘的持久队列  memory
+path.queue                     当queue.type:persisted数据文件存储的目录路径                                  path.data/queue
+queue.page_capacity            当queue.type:persisted页数据文件的大小,队列数据由只追加的数据文件组成。         250mb
+queue.max_events               当queue.type:persisted队列中的未读的最大事件数                                0(表示不限)
+queue.max_bytes                队列的字节数总容量,确保磁盘驱动器的容量大于此处指定的值,如果queue.max_events和   1024mb (1g)
+                               queue.max_bytes都指定了,Logstash使用第一个达到的。        
+queue.checkpoint.acks          当queue.type:persisted在强制检查点前ACKed事件最大数,指定为0表示不限            1024
+queue.checkpoint.writes        当queue.type:persisted在强制检查点前写事件的最大数,指定为0表示不限             1024
+queue.checkpoint.interval      心跳                                                                        1000
+http.host                      绑定地址,用来接收主机发生的http报文                                           127.0.0.1
+http.port                      绑定端口,用来接收主机发生的http报文                                           9600
+log.level                      日志级别                                                                    info
+log.format                     日志格式,json和plain                                                        plain
+path.logs                      Logstash写日志的目录                                                        LOGSTASH_HOME/logs
+path.plugins                   自定义插件                                                                  不用平台不同
