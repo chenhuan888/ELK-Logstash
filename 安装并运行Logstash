@@ -1,0 +1,10 @@
+1.zip和tar.gz的目录结构
+.zip和tar.gz包是完全独立的,所有的文件和目录，默认情况下，包含在主目录-解压档案包时创建的目录。这是很方便的,因为开始使用logstash时你不需要创建任何目录,
+卸载logstash也是一样容易,只需要删除目录即可。但是，最好更改配置和日志目录的默认位置以便以后不会删除重要数据。
+
+类型      描述                                                           默认位置                                     设置
+home      logstash安装根目录                                             {extract.path}-解压档案包时创建的目录
+bin       二进制脚本,包含logstash启动Logstash,logstash-plugin安装插件      {extract.path}/bin
+settings  配置文件,包含logstash.yml和jvm.options                          {extract.path}/config                       path.settings
+logs      日志文件                                                       {extract.path}/logs                          path.logs
+plugins   本地插件文件,每个插件包含在子目录中,仅开发推荐                     {extract.path}/plugins                      path.plugins
