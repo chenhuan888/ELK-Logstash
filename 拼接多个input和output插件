@@ -1,0 +1,11 @@
+您需要管理的信息通常来自若干个不同的源,使用cases可以为您的数据提供多个目的地。
+在本章节,你创建一个logstash管道,使用Twitter feed和filebeat客户端作为input,然后发送信息到elasticsearch,同时指向一个文件。
+
+1.从Twitter feed
+  为了添加Twitter feed,使用twitter input插件。要配置插件，需要几个信息：
+  ①.consumer key 它唯一标识您的Twitter应用程序。
+  ②.consumer secret 它作为您的Twitter应用程序的密码。
+  ③.一个或多个关键字 实例中使用"cloud"作为关键字,你可以使用任何你想要的。
+  ④.oauth token 使用这个应用程序识别Twitter帐户
+  ⑤.oauth token secret 作为Twitter帐户的密码
+  
