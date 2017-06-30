@@ -110,5 +110,293 @@
   }
   
   通过Grok filter插件解析web日志
+  现在已经工作了一个管道从filebeat读取日志行。然而,你将注意到日志消息的格式并没有处理。你想从日志中将日志消息解析成你指定的字段名,你将使用grok 
+  filter插件。Grok filter插件是logstash默认提供的若干个插件之一。关于如何管理logstash插件,请查看插件管理的参考文档。
   
+  Grok filter插件支持将非结构的日志数据解析成结构化的、可查询的。因为Grok filter插件在传来的日志数据查找pattern,配置插件需要你决定如何识别在使用
+  案例中你感兴趣的pattern。一个web服务日志的典型行例子如下：
+  83.149.9.216 - - [04/Jan/2015:05:13:42 +0000] "GET /presentations/logstash-monitorama-2013/images/kibana-search.png HTTP/1.1" 200 203023 "http://semicomplete.com/presentations/logstash-monitorama-2013/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.77 Safari/537.36"
+  ip地址放在行开始容易识别,括号中的时间戳也是一样。为了解析数据,你可以使用%{COMBINEDAPACHELOG}grok pattern,它从Apache日志结构化行使用下面图表:
+  (省略图标,请到官方查看)
+  编辑first-pipeline.conf文件,并使用下面的文本替换整个filter部分：
+  filter {
+    grok {
+        match => { "message" => "%{COMBINEDAPACHELOG}"}
+    }
+  }
+  当你替换好后,first-pipeline.conf文件内容应该如下：
+  input {
+      beats {
+          port => "5043"
+      }
+  }
+  filter {
+      grok {
+          match => { "message" => "%{COMBINEDAPACHELOG}"}
+      }
+  }
+  output {
+      stdout { codec => rubydebug }
+  }
+  保存你的更改,因为你启用的配置自动加载,你不需要重启logstash来重载你的修改。然后你需要迫使filebeat从scratch读取日志文件,前往filebeat运行的终端
+  窗口并使用ctrl+c关闭filebeat,然后删除filebeat注册表文件。例如运行：
+  sudo rm data/registry
+  由于filebeat存储harvests每种状态在注册表文件中,删除注册表文件迫使filebeat从scratch读取正在harvest的所有文件。接下来通过下面命令重启filebeat:
+  sudo ./filebeat -e -c filebeat.yml -d "publish"
+  当通过grok模式处理日志文件,事件将会有下面的JSON呈现：
+  {
+        "request" => "/presentations/logstash-monitorama-2013/images/kibana-search.png",
+          "agent" => "\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.77 Safari/537.36\"",
+         "offset" => 325,
+           "auth" => "-",
+          "ident" => "-",
+     "input_type" => "log",
+           "verb" => "GET",
+         "source" => "/path/to/file/logstash-tutorial.log",
+        "message" => "83.149.9.216 - - [04/Jan/2015:05:13:42 +0000] \"GET /presentations/logstash-monitorama-2013/images/kibana-search.png HTTP/1.1\" 200 203023 \"http://semicomplete.com/presentations/logstash-monitorama-2013/\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.77 Safari/537.36\"",
+           "type" => "log",
+           "tags" => [
+        [0] "beats_input_codec_plain_applied"
+    ],
+       "referrer" => "\"http://semicomplete.com/presentations/logstash-monitorama-2013/\"",
+     "@timestamp" => 2016-10-11T21:04:36.167Z,
+       "response" => "200",
+          "bytes" => "203023",
+       "clientip" => "83.149.9.216",
+       "@version" => "1",
+           "beat" => {
+        "hostname" => "My-MacBook-Pro.local",
+            "name" => "My-MacBook-Pro.local"
+    },
+           "host" => "My-MacBook-Pro.local",
+    "httpversion" => "1.1",
+      "timestamp" => "04/Jan/2015:05:13:42 +0000"
+  }
+  注意到事件包含了原始消息,但是日志消息也被分解成指定的字段。
   
+  通过Geoip Filter插件增强你的数据
+  另外解析日志数据可以更好的搜索,filter插件可以从现有数据中获得补充信息。例如geoip插件查找ip地址,从地址中获得地理位置信息,并添加到日志。
+  配置你的Logstash实例使用geoip filter插件添加以下行到first-pipeline.conf文件的filter部分。
+  geoip {
+     source => "clientip"
+  }
+  geoip插件配置要求你指定资源字段的名称,字段包含ip地址进行查询。在示例中,clientip字段包含ip地址。
+  因为filter是按照顺序评估的,确保配置文件geoip部分在grok部分后面,并且grok和geoip都内嵌在filter部分。当你配置好了,内容如下：
+  input {
+      beats {
+          port => "5043"
+      }
+  }
+  filter {
+      grok {
+          match => { "message" => "%{COMBINEDAPACHELOG}"}
+      }
+      geoip {
+          source => "clientip"
+      }
+  }
+  output {
+      stdout { codec => rubydebug }
+  }
+  保存更新。迫使filebeat从scratch读取日志文件,跟之前一样,关闭filebeat,删除注册表文件,然后通过一下命令重启filebeat:
+  sudo ./filebeat -e -c filebeat.yml -d "publish"
+  注意事件现在包含地理位置信息：
+  {
+        "request" => "/presentations/logstash-monitorama-2013/images/kibana-search.png",
+          "agent" => "\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.77 Safari/537.36\"",
+          "geoip" => {
+              "timezone" => "Europe/Moscow",
+                    "ip" => "83.149.9.216",
+              "latitude" => 55.7522,
+        "continent_code" => "EU",
+             "city_name" => "Moscow",
+         "country_code2" => "RU",
+          "country_name" => "Russia",
+              "dma_code" => nil,
+         "country_code3" => "RU",
+           "region_name" => "Moscow",
+              "location" => [
+            [0] 37.6156,
+            [1] 55.7522
+        ],
+           "postal_code" => "101194",
+             "longitude" => 37.6156,
+           "region_code" => "MOW"
+    },
+    ...
+    
+    索引数据到Elasticsearch
+    现在web日志已经被分解成指定字段,logstash管道可以索引数据到elsaticsearch集群中,编辑first-pipeline.conf文件,替换output部分为下面的文本：
+    output {
+        elasticsearch {
+            hosts => [ "localhost:9200" ]
+        }
+    }
+    通过这个配置,logstash使用http协议连接elsaticsearch。上面的例子是假设logstash和elasticsearch运行在同一台机器,你可以通过hosts配置文件指定
+    远程elasticsearch实例,像这样hosts => [ "es-machine:9092" ]
+    此时你的first-pipeline.conf文件有着input, filter和output合理的配置,看起来如下：
+    input {
+        beats {
+            port => "5043"
+        }
+    }
+     filter {
+        grok {
+            match => { "message" => "%{COMBINEDAPACHELOG}"}
+        }
+        geoip {
+            source => "clientip"
+        }
+    }
+    output {
+        elasticsearch {
+            hosts => [ "localhost:9200" ]
+        }
+    }
+    保存更新。迫使filebeat从scratch读取日志文件,跟之前一样,关闭filebeat,删除注册表文件,然后通过一下命令重启filebeat:
+    sudo ./filebeat -e -c filebeat.yml -d "publish"
+    
+    测试你的管道
+    现在logstash管道已经配置索引数据到elasticsearch集群,你可以查询elasticsearch。
+    尝试通过grok filter创建的字段测试查询elsaticsearch,替换$DATE为当前时间,使用YYYY.MM.DD格式：
+    curl -XGET 'localhost:9200/logstash-$DATE/_search?pretty&q=response=200'
+    
+    你应该得到多个击中结果。例如:
+    {
+    "took" : 21,
+    "timed_out" : false,
+    "_shards" : {
+      "total" : 5,
+      "successful" : 5,
+      "failed" : 0
+    },
+    "hits" : {
+      "total" : 98,
+      "max_score" : 3.745223,
+      "hits" : [
+        {
+          "_index" : "logstash-2016.10.11",
+          "_type" : "log",
+          "_id" : "AVe14gMiYMkU36o_eVsA",
+          "_score" : 3.745223,
+          "_source" : {
+            "request" : "/presentations/logstash-monitorama-2013/images/frontend-response-codes.png",
+            "agent" : "\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.77 Safari/537.36\"",
+            "geoip" : {
+              "timezone" : "Europe/Moscow",
+              "ip" : "83.149.9.216",
+              "latitude" : 55.7522,
+              "continent_code" : "EU",
+              "city_name" : "Moscow",
+              "country_code2" : "RU",
+              "country_name" : "Russia",
+              "dma_code" : null,
+              "country_code3" : "RU",
+              "region_name" : "Moscow",
+              "location" : [
+                37.6156,
+                55.7522
+              ],
+              "postal_code" : "101194",
+              "longitude" : 37.6156,
+              "region_code" : "MOW"
+            },
+            "offset" : 2932,
+            "auth" : "-",
+            "ident" : "-",
+            "input_type" : "log",
+            "verb" : "GET",
+            "source" : "/path/to/file/logstash-tutorial.log",
+            "message" : "83.149.9.216 - - [04/Jan/2015:05:13:45 +0000] \"GET /presentations/logstash-monitorama-2013/images/frontend-response-codes.png HTTP/1.1\" 200 52878 \"http://semicomplete.com/presentations/logstash-monitorama-2013/\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.77 Safari/537.36\"",
+            "type" : "log",
+            "tags" : [
+              "beats_input_codec_plain_applied"
+            ],
+            "referrer" : "\"http://semicomplete.com/presentations/logstash-monitorama-2013/\"",
+            "@timestamp" : "2016-10-11T22:34:25.317Z",
+            "response" : "200",
+            "bytes" : "52878",
+            "clientip" : "83.149.9.216",
+            "@version" : "1",
+            "beat" : {
+              "hostname" : "My-MacBook-Pro.local",
+              "name" : "My-MacBook-Pro.local"
+            },
+            "host" : "My-MacBook-Pro.local",
+            "httpversion" : "1.1",
+            "timestamp" : "04/Jan/2015:05:13:45 +0000"
+          }
+        }
+      },
+      ...
+      
+      尝试另一个搜索来自IP地址的地理信息,替换$DATE为当前时间,使用YYYY.MM.DD格式：
+      curl -XGET 'localhost:9200/logstash-$DATE/_search?pretty&q=geoip.city_name=Buffalo'
+      一些日志条目来自Buffalo,因此查询产生以下响应：
+      {
+        "took" : 3,
+        "timed_out" : false,
+        "_shards" : {
+          "total" : 5,
+          "successful" : 5,
+          "failed" : 0
+        },
+        "hits" : {
+          "total" : 3,
+          "max_score" : 2.6390574,
+          "hits" : [
+            {
+              "_index" : "logstash-2016.10.11",
+              "_type" : "log",
+              "_id" : "AVe14gMjYMkU36o_eVtO",
+              "_score" : 2.6390574,
+              "_source" : {
+                "request" : "/?flav=rss20",
+                "agent" : "\"-\"",
+                "geoip" : {
+                  "timezone" : "America/New_York",
+                  "ip" : "108.174.55.234",
+                  "latitude" : 42.9864,
+                  "continent_code" : "NA",
+                  "city_name" : "Buffalo",
+                  "country_code2" : "US",
+                  "country_name" : "United States",
+                  "dma_code" : 514,
+                  "country_code3" : "US",
+                  "region_name" : "New York",
+                  "location" : [
+                    -78.7279,
+                    42.9864
+                  ],
+                  "postal_code" : "14221",
+                  "longitude" : -78.7279,
+                  "region_code" : "NY"
+                },
+                "offset" : 21471,
+                "auth" : "-",
+                "ident" : "-",
+                "input_type" : "log",
+                "verb" : "GET",
+                "source" : "/path/to/file/logstash-tutorial.log",
+                "message" : "108.174.55.234 - - [04/Jan/2015:05:27:45 +0000] \"GET /?flav=rss20 HTTP/1.1\" 200 29941 \"-\" \"-\"",
+                "type" : "log",
+                "tags" : [
+                  "beats_input_codec_plain_applied"
+                ],
+                "referrer" : "\"-\"",
+                "@timestamp" : "2016-10-11T22:34:25.318Z",
+                "response" : "200",
+                "bytes" : "29941",
+                "clientip" : "108.174.55.234",
+                "@version" : "1",
+                "beat" : {
+                  "hostname" : "My-MacBook-Pro.local",
+                  "name" : "My-MacBook-Pro.local"
+                },
+                "host" : "My-MacBook-Pro.local",
+                "httpversion" : "1.1",
+                "timestamp" : "04/Jan/2015:05:27:45 +0000"
+              }
+            },
+           ...
+        
